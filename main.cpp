@@ -4,6 +4,8 @@
 #include <unistd.h>   // For access(), fork(), execvp
 #include <unordered_set>
 #include <vector>
+#include <unistd.h> // For getcwd()
+#include <limits.h> // For PATH_MAX --> PATH_MAX ensures enough space for the path. (getcwd)
 using namespace std;
 
 vector<string> split(string &str, char delimiter) {
@@ -43,7 +45,7 @@ string search_command_in_path(string command,vector<string> &PATH_directories)
 
 int main() {
   vector<string> tokens;
-  unordered_set<string> builtin = {"exit", "type", "echo"};
+  unordered_set<string> builtin = {"exit", "type", "echo","pwd"};
   string path_env = getenv("PATH");
   vector<string> path_dirs = !path_env.empty() ? split(path_env, ':') : vector<string>(); // Store Path directories 
 
@@ -55,8 +57,13 @@ int main() {
     string input;
     getline(cin, input);
     tokens = split(input, ' ');
-
-    if (tokens.size() >= 2 && tokens[0] == "exit" && tokens[1] == "0")
+    if(tokens.size()==1 && tokens[0]=="pwd")
+    {
+       char cwd[PATH_MAX];
+       if(getcwd(cwd,sizeof(cwd))!=NULL) cout<<cwd<<"\n";
+       else perror("getcwd");
+    }
+    else if (tokens.size() >= 2 && tokens[0] == "exit" && tokens[1] == "0")
       return 0;
     else if (tokens.size() > 0 && tokens[0] == "echo") 
     {
@@ -89,6 +96,8 @@ int main() {
           for (string &arg : tokens) args.push_back(&arg[0]);
           args.push_back(nullptr); // Null-terminate the array
           execvp(command_path.c_str(), args.data()); // what is execvp? ---> execvp.md 
+          //  /usr/local/bin/custom_exe_1234 alice 
+
           perror("execvp"); // Print error if execvp fails
           exit(EXIT_FAILURE); // Exit the child process with failure status
 
@@ -102,9 +111,8 @@ int main() {
           waitpid(pid, &status, 0) makes the parent wait for the child to finish execution.
           This prevents the parent from continuing execution before the child completes.
           */
-          //          
-          /*
-           status is not initialized because waitpid() fills it with the child's exit status.
+         /*
+         status is not initialized because waitpid() fills it with the child's exit status.
          */
         } 
         else 
