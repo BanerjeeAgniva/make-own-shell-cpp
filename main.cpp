@@ -102,6 +102,10 @@ int main() {
           waitpid(pid, &status, 0) makes the parent wait for the child to finish execution.
           This prevents the parent from continuing execution before the child completes.
           */
+          //          
+          /*
+           status is not initialized because waitpid() fills it with the child's exit status.
+         */
         } 
         else 
         {
