@@ -1,4 +1,4 @@
-Here's the content written in Markdown format for a `.md` file:
+
 
 ```markdown
 # Understanding Arguments in Command-Line Programs
