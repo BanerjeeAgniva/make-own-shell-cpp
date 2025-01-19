@@ -21,7 +21,7 @@ vector<string> split(string &str, char delimiter) {
       token += ch;
     }
   }
-  if (!token.empty()) {
+  if (!token.empty()) { 
     tokens.push_back(token);
   }
   return tokens;
@@ -65,7 +65,8 @@ int main() {
     }
     else if(tokens.size()==2 && tokens[0]=="cd")
     {
-        if(chdir(tokens[1].c_str())!=0)
+        if(tokens[1]=="~") chdir(getenv("HOME")) ; 
+        else if(chdir(tokens[1].c_str())!=0)
         {
             cout<<"cd: "<<tokens[1]<<": No such file or directory"<<"\n";
         }
@@ -108,7 +109,7 @@ int main() {
           exit(EXIT_FAILURE); // Exit the child process with failure status
 
         } 
-        else if (pid > 0) 
+        else if (pid > 0)  
         { // Parent process
           int status;
           waitpid(pid, &status, 0); // Wait for child to finish
