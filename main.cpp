@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include <sys/wait.h> // For wait()
-#include <unistd.h>   // For access(), fork(), execvp
+#include <unistd.h>   // For access(), fork(), execvp , chdir 
 #include <unordered_set>
 #include <vector>
 #include <unistd.h> // For getcwd()
@@ -63,8 +63,14 @@ int main() {
        if(getcwd(cwd,sizeof(cwd))!=NULL) cout<<cwd<<"\n";
        else perror("getcwd");
     }
-    else if (tokens.size() >= 2 && tokens[0] == "exit" && tokens[1] == "0")
-      return 0;
+    else if(tokens.size()==2 && tokens[0]=="cd")
+    {
+        if(chdir(tokens[1].c_str())!=0)
+        {
+            cout<<"cd: "<<tokens[1]<<": No such file or directory"<<"\n";
+        }
+    }
+    else if (tokens.size() >= 2 && tokens[0] == "exit" && tokens[1] == "0") return 0;
     else if (tokens.size() > 0 && tokens[0] == "echo") 
     {
       for (int i = 1; i < tokens.size(); i++) cout << tokens[i] << " ";
