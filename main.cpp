@@ -11,13 +11,23 @@ using namespace std;
 vector<string> split(string &str, char delimiter) {
   vector<string> tokens;
   string token;
-  for (char ch : str) {
-    if (ch == delimiter) {
-      if (!token.empty()) {
+  bool singlequoteopen=false;
+  for (char ch : str) 
+  {
+    if(ch=='\'') 
+    {
+        singlequoteopen=!singlequoteopen;
+    } 
+    else if (ch == delimiter && !singlequoteopen) 
+    {
+      if (!token.empty()) 
+      {
         tokens.push_back(token);
         token.clear();
       }
-    } else {
+    } 
+    else 
+    {
       token += ch;
     }
   }
@@ -26,7 +36,6 @@ vector<string> split(string &str, char delimiter) {
   }
   return tokens;
 }
-
 string search_command_in_path(string command,vector<string> &PATH_directories) 
 {
   for (string PATH_directory : PATH_directories) {
