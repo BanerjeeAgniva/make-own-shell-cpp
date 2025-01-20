@@ -12,13 +12,18 @@ vector<string> split(string &str, char delimiter) {
   vector<string> tokens;
   string token;
   bool singlequoteopen=false;
+  bool doublequoteopen=false;
   for (char ch : str) 
   {
-    if(ch=='\'') 
+    if(!doublequoteopen && ch=='\'') 
     {
         singlequoteopen=!singlequoteopen;
     } 
-    else if (ch == delimiter && !singlequoteopen) 
+    else if(ch=='\"')
+    {
+        doublequoteopen=!doublequoteopen;
+    }
+    else if (ch == delimiter && !singlequoteopen && !doublequoteopen) 
     {
       if (!token.empty()) 
       {
