@@ -10,12 +10,22 @@ using namespace std;
 
 vector<string> split(string &str, char delimiter) {
   vector<string> tokens;
-  string token;
+  string token="";
   bool singlequoteopen=false;
   bool doublequoteopen=false;
+  bool preservenext=false;
   for (char ch : str) 
   {
-    if(!doublequoteopen && ch=='\'') 
+    if(!doublequoteopen  && preservenext)
+    {
+      token+=ch;
+      preservenext=false;
+    }
+    else if(ch=='\\')
+    {
+        preservenext=true;
+    }
+    else if(!doublequoteopen && ch=='\'') 
     {
         singlequoteopen=!singlequoteopen;
     } 
@@ -36,11 +46,13 @@ vector<string> split(string &str, char delimiter) {
       token += ch;
     }
   }
-  if (!token.empty()) { 
+  if (!token.empty()) 
+  { 
     tokens.push_back(token);
   }
   return tokens;
 }
+
 string search_command_in_path(string command,vector<string> &PATH_directories) 
 {
   for (string PATH_directory : PATH_directories) {
@@ -50,25 +62,27 @@ string search_command_in_path(string command,vector<string> &PATH_directories)
   }
   return "";
 }
-        /*
-        int	 access(const char *, int);
-        access() is a system call that Returns 0 if the file exists and has the specified permission(X_OK = executable_okay?).
-        X_OK checks if the file is executable by the calling process.
-        .c_str() converts string to const char*
-        */
+
+/*
+int	 access(const char *, int);
+access() is a system call that Returns 0 if the file exists and has the specified permission(X_OK = executable_okay?).
+X_OK checks if the file is executable by the calling process.
+.c_str() converts string to const char*
+*/
+
 
 int main() {
   vector<string> tokens;
   unordered_set<string> builtin = {"exit", "type", "echo","pwd"};
   string path_env = getenv("PATH");
-  vector<string> path_dirs = !path_env.empty() ? split(path_env, ':') : vector<string>(); // Store Path directories 
+  vector<string> path_dirs = !path_env.empty() ? split(path_env, ':') : vector<string>(); // Store Path directories  
 
   while (true) 
   {
-    cout << unitbuf;
+    cout << unitbuf; 
     tokens.clear();
     cout << "$ ";
-    string input;
+    string input; 
     getline(cin, input);
     tokens = split(input, ' ');
     if(tokens.size()==1 && tokens[0]=="pwd")
