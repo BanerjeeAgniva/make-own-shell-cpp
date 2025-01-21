@@ -8,57 +8,67 @@
 #include <limits.h> // For PATH_MAX --> PATH_MAX ensures enough space for the path. (getcwd)
 using namespace std;
 
-vector<string> split(string &str, char delimiter) {
-  vector<string> tokens;
-  string token="";
-  bool singlequoteopen=false;
-  bool doublequoteopen=false;
-  bool preservenext=false;
-  for (char ch : str) 
-  {
-    if(!doublequoteopen  && preservenext)
+vector<string> split(string &str, char delimiter) 
+{
+    vector<string> tokens;
+    string token = "";
+    bool singlequoteopen = false, doublequoteopen = false, escaped = false;
+    for (int i = 0; i < str.size(); i++) 
     {
-      token+=ch;
-      preservenext=false;
+        char ch = str[i];
+        if (escaped) 
+        {   // If the previous character was '\', treat this char normally
+            if (doublequoteopen && ch != '"' && ch != '\\')  //   - - - - - - - - > important !!
+            { 
+                token += '\\';  // Preserve extra backslash inside double quotes
+            }
+            token += ch;
+            escaped = false;
+        } 
+        else if (ch == '\\') 
+        {
+            escaped = true;  // Set flag to escape next character
+        } 
+        else if (ch == '\'') 
+        {
+            if (!doublequoteopen) singlequoteopen = !singlequoteopen;
+            else token += ch; // Treat single quote as normal inside double quotes
+        } 
+        else if (ch == '"') 
+        {
+            doublequoteopen = !doublequoteopen;
+        } 
+        else if (ch == delimiter && !singlequoteopen && !doublequoteopen) {
+            if (!token.empty()) 
+            {
+                tokens.push_back(token);
+                token.clear();
+            }
+        } 
+        else 
+        {
+            token += ch;
+        }
     }
-    else if(ch=='\\')
+
+    if (!token.empty()) 
     {
-        preservenext=true;
-    }
-    else if(!doublequoteopen && ch=='\'') 
-    {
-        singlequoteopen=!singlequoteopen;
-    } 
-    else if(ch=='\"')
-    {
-        doublequoteopen=!doublequoteopen;
-    }
-    else if (ch == delimiter && !singlequoteopen && !doublequoteopen) 
-    {
-      if (!token.empty()) 
-      {
         tokens.push_back(token);
-        token.clear();
-      }
-    } 
-    else 
-    {
-      token += ch;
     }
-  }
-  if (!token.empty()) 
-  { 
-    tokens.push_back(token);
-  }
-  return tokens;
+
+    return tokens;
 }
+
 
 string search_command_in_path(string command,vector<string> &PATH_directories) 
 {
-  for (string PATH_directory : PATH_directories) {
+  for (string PATH_directory : PATH_directories) 
+  {
     string fullpath = PATH_directory + "/" + command;
     if (access(fullpath.c_str(), X_OK) == 0)
-      return fullpath;
+    {
+        return fullpath;
+    }
   }
   return "";
 }
@@ -93,16 +103,25 @@ int main() {
     }
     else if(tokens.size()==2 && tokens[0]=="cd")
     {
-        if(tokens[1]=="~") chdir(getenv("HOME")) ; 
+        if(tokens[1]=="~") 
+        {
+            chdir(getenv("HOME")) ; 
+        }
         else if(chdir(tokens[1].c_str())!=0)
         {
             cout<<"cd: "<<tokens[1]<<": No such file or directory"<<"\n";
         }
     }
-    else if (tokens.size() >= 2 && tokens[0] == "exit" && tokens[1] == "0") return 0;
+    else if (tokens.size() >= 2 && tokens[0] == "exit" && tokens[1] == "0") 
+    {
+        return 0;
+    }
     else if (tokens.size() > 0 && tokens[0] == "echo") 
     {
-      for (int i = 1; i < tokens.size(); i++) cout << tokens[i] << " ";
+      for (int i = 1; i < tokens.size(); i++) 
+      {
+        cout << tokens[i] << " ";
+      }
       cout << "\n";
       continue;
     } 
@@ -110,12 +129,21 @@ int main() {
     {
       for (int i = 1; i < tokens.size(); i++) 
       {
-        if (builtin.count(tokens[i])) cout << tokens[i] << " is a shell builtin"<< "\n";
+        if (builtin.count(tokens[i])) 
+        {
+            cout << tokens[i] << " is a shell builtin"<< "\n";
+        }
         else 
         {
           string found_path = search_command_in_path(tokens[i], path_dirs);
-          if (!found_path.empty()) cout << tokens[i] << " is " << found_path << "\n";
-          else cout << tokens[i] << ": not found"<< "\n";
+          if (!found_path.empty()) 
+          {
+            cout << tokens[i] << " is " << found_path << "\n";
+          }
+          else 
+          {
+            cout << tokens[i] << ": not found"<< "\n";
+          }
         }
       }
     } 
@@ -128,7 +156,10 @@ int main() {
         if (pid == 0) // Child process
         { 
           vector<char *> args;
-          for (string &arg : tokens) args.push_back(&arg[0]);
+          for (string &arg : tokens) 
+          {
+            args.push_back(&arg[0]);
+          }
           args.push_back(nullptr); // Null-terminate the array
           execvp(command_path.c_str(), args.data()); // what is execvp? ---> execvp.md 
           //  /usr/local/bin/custom_exe_1234 alice 
