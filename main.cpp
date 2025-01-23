@@ -16,10 +16,11 @@ vector<string> split(string &str, char delimiter)
     for (int i = 0; i < str.size(); i++) 
     {
         char ch = str[i];
-        if (escaped) 
-        {   // If the previous character was '\', treat this char normally
+        if (escaped)  // If the previous character was '\', treat this char normally
+        {  
             if (doublequoteopen && ch != '"' && ch != '\\')  //   - - - - - - - - > important !!
             { 
+                // if doublequotes are open and they are not being closed right now 
                 token += '\\';  // Preserve extra backslash inside double quotes
             }
             token += ch;
@@ -28,6 +29,7 @@ vector<string> split(string &str, char delimiter)
         else if (ch == '\\') 
         {
             escaped = true;  // Set flag to escape next character
+            if(singlequoteopen) token+=ch;   // ----> maintain character if single quotes are open 
         } 
         else if (ch == '\'') 
         {
