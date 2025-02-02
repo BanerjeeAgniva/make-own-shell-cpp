@@ -10,32 +10,46 @@ using namespace std;
 
 vector<string> split(string &str, char delimiter) 
 {
-    vector<string> tokens;
+    vector<string>      tokens;
     string token = "";
     bool singlequoteopen = false, doublequoteopen = false, escaped = false;
     for (int i = 0; i < str.size(); i++) 
-    {
+    {     
         char ch = str[i];
-        if (escaped)  // If the previous character was '\', treat this char normally
+        if(singlequoteopen)
+        {
+          if(ch!='\'') token+=ch;
+          else singlequoteopen=!singlequoteopen;
+          /*
+          previously --> 
+          '/tmp/foo/"f 47"' ---> tmp/foo/f 47
+          corrected -----------> tmp/foo/"f 47"
+          */
+        }
+        else if (escaped)  // If the previous character was '\', treat this char normally
         {  
             if (doublequoteopen && ch != '"' && ch != '\\')  //   - - - - - - - - > important !!
             { 
                 // if doublequotes are open and they are not being closed right now 
                 token += '\\';  // Preserve extra backslash inside double quotes
             }
+            else if(singlequoteopen && ch!='\'' && ch!='\\')
+            {
+              token+='\\';
+            }
             token += ch;
             escaped = false;
         } 
-        else if (ch == '\\') 
-        {
+        else if (ch == '\\')  
+        { 
             escaped = true;  // Set flag to escape next character
             if(singlequoteopen) token+=ch;   // ----> maintain character if single quotes are open 
-        } 
+        }  
         else if (ch == '\'') 
-        {
+        {        
             if (!doublequoteopen) singlequoteopen = !singlequoteopen;
             else token += ch; // Treat single quote as normal inside double quotes
-        } 
+        }         
         else if (ch == '"') 
         {
             doublequoteopen = !doublequoteopen;
@@ -51,6 +65,7 @@ vector<string> split(string &str, char delimiter)
         {
             token += ch;
         }
+        //cout<<token<<endl;
     }
 
     if (!token.empty()) 
@@ -71,7 +86,7 @@ string search_command_in_path(string command,vector<string> &PATH_directories)
     {
         return fullpath;
     }
-  }
+  } 
   return "";
 }
 
@@ -106,7 +121,7 @@ int main() {
     else if(tokens.size()==2 && tokens[0]=="cd")
     {
         if(tokens[1]=="~") 
-        {
+        {  
             chdir(getenv("HOME")) ; 
         }
         else if(chdir(tokens[1].c_str())!=0)
@@ -168,7 +183,6 @@ int main() {
 
           perror("execvp"); // Print error if execvp fails
           exit(EXIT_FAILURE); // Exit the child process with failure status
-
         } 
         else if (pid > 0)  
         { // Parent process
@@ -180,14 +194,14 @@ int main() {
           This prevents the parent from continuing execution before the child completes.
           */
          /*
-         status is not initialized because waitpid() fills it with the child's exit status.
+          status is not initialized because waitpid() fills it with the child's exit status.
          */
         } 
         else 
         {
           perror("fork");
         }
-      } 
+      }    
       else 
       {
         cout << tokens[0] << ": command not found"<< "\n";
@@ -195,3 +209,4 @@ int main() {
     }
   }
 }
+       
