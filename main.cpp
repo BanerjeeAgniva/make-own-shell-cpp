@@ -88,12 +88,12 @@ void handlecd(vector<string>& tokens)
     cout << "cd: " << tokens[1] << ": No such file or directory"<< "\n";
 }
 
-void handleecho(bool writetofile, bool stderror, string writeto,vector<string>&tokens)
+void handleecho(bool writetofile, bool stderror, string writeto,vector<string>&tokens,bool appendstdout)
 {
       ofstream outfile;
       if (writetofile) 
       {
-        outfile.open(writeto, ios::out | ios::trunc);
+        outfile.open(writeto, ios::out | (appendstdout ? ios::app : ios::trunc)); //open in append mode if >> or 1>> 
         if (!outfile) 
         {
           cerr << "Error opening file: " << writeto << "\n";
@@ -102,7 +102,7 @@ void handleecho(bool writetofile, bool stderror, string writeto,vector<string>&t
       }
       for (int i = 1; i < tokens.size(); i++) 
       {
-        if (tokens[i] == ">" || tokens[i] == "1>" || tokens[i] == "2>") 
+        if (tokens[i] == ">" || tokens[i] == "1>" || tokens[i] == "2>" || tokens[i]==">>" || tokens[i]=="1>>") 
         {
           break; // Stop processing after `>` operator
         }
@@ -118,7 +118,7 @@ void handleecho(bool writetofile, bool stderror, string writeto,vector<string>&t
 
       if (writetofile) 
       {
-        outfile << "\n"; // Ensure newline in the file
+        outfile << "\n"; 
         outfile.close();
       } 
       else 
@@ -247,14 +247,17 @@ int main() {
     string writeto = "";
     bool nonexistent = false;
     bool stderror = false;
+    bool appendstdout=false;
 
     // Iterate through tokens to find ">" or "1>" or "2>"
     for (auto it = tokens.begin(); it != tokens.end(); ++it) 
     {
-     if (*it == ">" || *it == "1>" || *it == "2>") 
+     if (*it == ">" || *it == "1>" || *it == "2>" || *it==">>" || *it=="1>>") 
      {
         if(*it == "2>") stderror=true;
         else writetofile = true;
+
+        if(*it==">>" || *it=="1>>") appendstdout=true;
 
         auto prev = it - 1;  // Element before ">" or "1>"
         if (prev != tokens.begin() && *prev == "nonexistent") 
@@ -273,13 +276,13 @@ int main() {
         break;
      }
    }
-    if(readfrom=="ls" || readfrom=="cat") readfromfile=false;
+    if(readfrom=="ls" || readfrom=="-1" ) readfromfile=false;
     //debug(readfrom,writeto);
     string token0=tokens[0];
     
     //----------------------------------------------------------------------------
     //----------------------------------------------------------------------------
-    if (tokens.size() > 0 && token0 == "echo") handleecho(writetofile,stderror,writeto,tokens);
+    if (tokens.size() > 0 && token0 == "echo") handleecho(writetofile,stderror,writeto,tokens,appendstdout);
     else if (tokens.size() > 0 && token0 == "type") handletype(builtin,tokens,path_dirs);
     else if (tokens.size() == 1 && token0 == "pwd") handlepwd();
     else if (tokens.size() == 2 && token0 == "cd") handlecd(tokens);
@@ -302,7 +305,7 @@ int main() {
           }
           else 
           {
-            std::ofstream file(writeto); // Open in default mode (truncates by default)
+            std::ofstream file(writeto, ios::out | (appendstdout ? ios::app : ios::trunc)); //open in append mode if >> or 1>> )
             if (!file) 
             {
               std::cerr << "Error: Cannot open file.\n";
@@ -310,7 +313,7 @@ int main() {
             }
             file << message; // Write to the file (overwrites existing content)
             file.close();
-            if(readfrom!="ls" && readfrom!="-1") open_and_stdout_file(readfrom);
+            if(readfromfile) open_and_stdout_file(readfrom);
             continue;
           }
         }
@@ -319,7 +322,7 @@ int main() {
         { // Child process
           if (writetofile && !stderror) 
           {
-            int fd = open(writeto.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+            int fd = open(writeto.c_str(), O_WRONLY | O_CREAT | (appendstdout ? O_APPEND : O_TRUNC), 0644);
             if (fd == -1) 
             {
               perror("Error opening file");
@@ -331,7 +334,7 @@ int main() {
              close(fd);
             }
             // Remove '>' and the filename from tokens before executing
-            auto it = find_if(tokens.begin(), tokens.end(), [](const string &s) { return s == ">" || s == "1>"; });
+            auto it = find_if(tokens.begin(), tokens.end(), [](const string &s) { return s == ">" || s == "1>" || s == ">>" || s=="1>>"; });
             if (it != tokens.end() && (it + 1) != tokens.end()) 
             {
               writeto = *(it + 1);  // Extract the filename
