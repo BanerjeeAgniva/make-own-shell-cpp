@@ -1,93 +1,129 @@
 #include <iostream>
-#include <vector>
 #include <string>
+#include <sys/wait.h> // For wait()
+#include <unistd.h>   // For access(), fork(), execvp
 #include <unordered_set>
-#include <unistd.h>   // For access()
+#include <vector>
+#include <unistd.h> // For getcwd()
+#include <limits.h> // For PATH_MAX --> PATH_MAX ensures enough space for the path. (getcwd)
 using namespace std;
 
 vector<string> split(string &str, char delimiter) {
-    vector<string> tokens;
-    string token;
-    for (char ch : str) {
-        if (ch == delimiter) {
-            if (!token.empty()) 
-            {
-                tokens.push_back(token); 
-                token.clear();           
-            }
-        } 
-        else {
-            token += ch;
-        }
+  vector<string> tokens;
+  string token;
+  for (char ch : str) {
+    if (ch == delimiter) {
+      if (!token.empty()) {
+        tokens.push_back(token);
+        token.clear();
+      }
+    } else {
+      token += ch;
     }
-    if (!token.empty()) {
-        tokens.push_back(token); 
-    }
-    return tokens;
+  }
+  if (!token.empty()) {
+    tokens.push_back(token);
+  }
+  return tokens;
 }
 
-string search_command_in_path(string command,vector<string>& PATH_directories){
-    for(string PATH_directory : PATH_directories){
-      string fullpath=PATH_directory+"/"+command;
-      if(access(fullpath.c_str(),X_OK)==0) return fullpath;
-    }
-    return "";
+string search_command_in_path(string command,vector<string> &PATH_directories) 
+{
+  for (string PATH_directory : PATH_directories) {
+    string fullpath = PATH_directory + "/" + command;
+    if (access(fullpath.c_str(), X_OK) == 0)
+      return fullpath;
+  }
+  return "";
 }
-        
         /*
         int	 access(const char *, int);
-        access() is a system call that:
-        Returns 0 if the file exists and has the specified permission.
-        Here, X_OK checks if the file is executable by the calling process.
-        // .c_str() converts to const char*
+        access() is a system call that Returns 0 if the file exists and has the specified permission(X_OK = executable_okay?).
+        X_OK checks if the file is executable by the calling process.
+        .c_str() converts string to const char*
         */
 
 int main() {
-    vector<string> v;
-    unordered_set<string> builtin;
-    builtin.insert("exit");
-    builtin.insert("type");
-    builtin.insert("echo");
+  vector<string> tokens;
+  unordered_set<string> builtin = {"exit", "type", "echo","pwd"};
+  string path_env = getenv("PATH");
+  vector<string> path_dirs = !path_env.empty() ? split(path_env, ':') : vector<string>(); // Store Path directories 
 
-    string path_env = getenv("PATH");
-    vector<string> path_dirs = !path_env.empty() ? split(path_env, ':') : vector<string>();
-    while (true) {
-        cout << unitbuf;
-        v.clear();
-        cout << "$ ";  
-        string input;
-        getline(cin, input);
-        v=split(input,' ');
-
-        if(v.size()>=2 && v[0]=="exit" && v[1]=="0") return 0;
-        else if (v.size() > 0 && v[0] == "echo") {
-            for (int i = 1; i < v.size(); i++) cout << v[i] << " ";
-            cout << "\n";
-            continue;
-        }
-        else if (v.size() > 0 && v[0] == "type") 
+  while (true) 
+  {
+    cout << unitbuf;
+    tokens.clear();
+    cout << "$ ";
+    string input;
+    getline(cin, input);
+    tokens = split(input, ' ');
+    if(tokens.size()==1 && tokens[0]=="pwd")
+    {
+       char cwd[PATH_MAX];
+       if(getcwd(cwd,sizeof(cwd))!=NULL) cout<<cwd<<"\n";
+       else perror("getcwd");
+    }
+    else if (tokens.size() >= 2 && tokens[0] == "exit" && tokens[1] == "0")
+      return 0;
+    else if (tokens.size() > 0 && tokens[0] == "echo") 
+    {
+      for (int i = 1; i < tokens.size(); i++) cout << tokens[i] << " ";
+      cout << "\n";
+      continue;
+    } 
+    else if (tokens.size() > 0 && tokens[0] == "type") 
+    {
+      for (int i = 1; i < tokens.size(); i++) 
+      {
+        if (builtin.count(tokens[i])) cout << tokens[i] << " is a shell builtin"<< "\n";
+        else 
         {
-            for (int i = 1; i < v.size(); i++) {
-                if (builtin.count(v[i])) 
-                {
-                    cout << v[i] << " is a shell builtin" << "\n";
-                } 
-                else 
-                {
-                    string found_path = search_command_in_path(v[i], path_dirs); // <---- IMP
-                    if (!found_path.empty()) {
-                        cout << v[i] << " is " << found_path << "\n";
-                    } 
-                    else {
-                        cout << v[i] << ": not found" << "\n";
-                    }
-                }
-            }
+          string found_path = search_command_in_path(tokens[i], path_dirs);
+          if (!found_path.empty()) cout << tokens[i] << " is " << found_path << "\n";
+          else cout << tokens[i] << ": not found"<< "\n";
+        }
+      }
+    } 
+    else 
+    {
+      string command_path = search_command_in_path(tokens[0], path_dirs); // store 
+      if (!command_path.empty()) 
+      {
+        pid_t pid = fork();
+        if (pid == 0) // Child process
+        { 
+          vector<char *> args;
+          for (string &arg : tokens) args.push_back(&arg[0]);
+          args.push_back(nullptr); // Null-terminate the array
+          execvp(command_path.c_str(), args.data()); // what is execvp? ---> execvp.md 
+          //  /usr/local/bin/custom_exe_1234 alice 
+
+          perror("execvp"); // Print error if execvp fails
+          exit(EXIT_FAILURE); // Exit the child process with failure status
+
+        } 
+        else if (pid > 0) 
+        { // Parent process
+          int status;
+          waitpid(pid, &status, 0); // Wait for child to finish
+          /*
+          pid > 0 means we're in the parent process.
+          waitpid(pid, &status, 0) makes the parent wait for the child to finish execution.
+          This prevents the parent from continuing execution before the child completes.
+          */
+         /*
+         status is not initialized because waitpid() fills it with the child's exit status.
+         */
         } 
         else 
         {
-            cout << input << ": command not found" << "\n";
+          perror("fork");
         }
+      } 
+      else 
+      {
+        cout << tokens[0] << ": command not found"<< "\n";
+      }
     }
+  }
 }
-
